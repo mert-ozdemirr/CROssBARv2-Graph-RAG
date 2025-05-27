@@ -145,8 +145,10 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          chat_id: selectedChat.id,
           content: input,
           model: selectedModel.id,
+          retrieved_docs: [], // TODO: Replace with real docs once retrieval is wired
         }),
       });
 
