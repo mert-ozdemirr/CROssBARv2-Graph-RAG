@@ -73,7 +73,7 @@ function App() {
   const [apiKey, setApiKey] = useState('');
   const [searchLength, setSearchLength] = useState(20);
   const [extensionSize, setExtensionSize] = useState(100);
-  const [tokenError, setTokenError] = useState('')
+  const [tokenError, setTokenError] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState('');
   const [chats, setChats] = useState([
@@ -87,8 +87,6 @@ function App() {
   const [fontSize, setFontSize] = useState(fontSizes[1]);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editingChatName, setEditingChatName] = useState('');
-
-  const TOKEN_LIMIT = 20;
 
   const isDarkTheme = theme.id.startsWith('dark');
   const settingsImage = isDarkTheme
@@ -111,11 +109,6 @@ function App() {
     ];
 
     try {
-      const nodesTokenCount = Math.floor(Math.random() * 30);
-      if (nodesTokenCount > TOKEN_LIMIT) {
-        setTokenError(`Retrieved nodes exceed token limit of ${TOKEN_LIMIT} tokens, only the first ${TOKEN_LIMIT} will be used for generating response. (found: ${nodesTokenCount} tokens)`);
-      }
-
       for (const step of steps) {
         setGenerationStep(step);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -135,12 +128,6 @@ function App() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const estimatedTokens = Math.ceil(input.length / 4);
-    
-    if (estimatedTokens > TOKEN_LIMIT) {
-      setTokenError(`Message exceeds token limit of ${TOKEN_LIMIT} tokens (estimated: ${estimatedTokens} tokens)`);
-    }
-
     const newMessage = {
       id: Date.now(),
       role: 'user',
@@ -151,24 +138,39 @@ function App() {
     setMessages([...messages, newMessage]);
     setInput('');
 
-    const success = await simulateResponseGeneration();
+    try {
+      const response = await fetch('http://localhost:8000/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: input,
+          model: selectedModel.id,
+        }),
+      });
 
-    const aiResponse = {
-      id: Date.now() + 1,
-      role: 'assistant',
-      content: `This is a simulated response from ${selectedModel.name}.`,
-      timestamp: new Date().toISOString(),
-    };
+      const data = await response.json();
 
-    const updatedMessages = [...messages, newMessage, aiResponse];
-    setMessages(updatedMessages);
+      const aiResponse = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date().toISOString(),
+      };
 
-    const updatedChats = chats.map((chat) =>
-      chat.id === selectedChat.id
-        ? { ...chat, messages: updatedMessages }
-        : chat
-    );
-    setChats(updatedChats);
+      const updatedMessages = [...messages, newMessage, aiResponse];
+      setMessages(updatedMessages);
+
+      const updatedChats = chats.map((chat) =>
+        chat.id === selectedChat.id
+          ? { ...chat, messages: updatedMessages }
+          : chat
+      );
+      setChats(updatedChats);
+    } catch (error) {
+      setTokenError('Failed to connect to the backend server');
+    }
   };
 
   const redoSearch = async (messageId) => {
