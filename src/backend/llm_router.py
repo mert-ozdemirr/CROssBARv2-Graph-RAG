@@ -1,4 +1,4 @@
-rom providers.openai_provider import call_openai
+from providers.openai_provider import call_openai
 from providers.openrouter_provider import call_openrouter
 from providers.anthropic_provider import call_anthropic
 from providers.mistral_provider import call_mistral

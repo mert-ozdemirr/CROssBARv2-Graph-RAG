@@ -8,7 +8,6 @@ class QueryRequest(BaseModel):
     api_key: str
     searchLength: int
     extensionSize: int
-    retrieved_docs: List[str]
 
 class QueryResponse(BaseModel):
     chat_id: str
