@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 import pickle
+import google.generativeai as genai
+
 
 import retriever
 import prompt
@@ -36,17 +38,33 @@ app.add_middleware(
 
 
 @app.post("/query", response_model=QueryResponse)
-def handle_query(data: QueryRequest):
-    try:
-        logger.info(f"Received query: {data.content} using model: {data.model}")
-        print(data.content)
-        retrieved_docs = graph_retriever(data.content, data.searchLength, data.extensionSize)
-        prompt = build_prompt(retrieved_docs, data.content)
-        #answer = generate_response(model=data.model, prompt=prompt, api_key=data.api_key)
-        return QueryResponse(chat_id=data.chat_id, response="answer")
-    except Exception as e:
+def handle_query(request: Request, data: QueryRequest):
+    #try:
+    logger.info(f"Received query: {data.content} using model: {data.model}")
+    print(data.content)
+    retrieved_docs = graph_retriever(data.content, data.searchLength, data.extensionSize, request)
+    prompt = build_prompt(retrieved_docs, data.content)
+    print(len(prompt))
+    print(prompt[0])
+    print(prompt[-1])
+
+
+    client = genai.configure(api_key='AIzaSyDbMReeHt_IAjjLqDe2OVTJPFPClJLshBQ')
+    model=genai.GenerativeModel(
+    model_name="gemini-2.5-flash-preview-04-17",
+    system_instruction="Please use the structured data I provide to you as knowledge base and answer the question in the prompt accordingly. And do not use any additional information you know externally.")
+    
+    if len(prompt) > 3000000:
+        prompt = prompt[:3000000]
+
+    response = model.generate_content(prompt)
+    answer = response.text
+    
+    #answer = generate_response(model=data.model, prompt=prompt, api_key=data.api_key)
+    return QueryResponse(chat_id=data.chat_id, response=answer)
+    """except Exception as e:
         logger.error(f"Error processing query: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))"""
     
 if __name__ == "__main__":
     import uvicorn

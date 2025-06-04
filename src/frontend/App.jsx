@@ -151,7 +151,7 @@ function App() {
           api_key: apiKey,
           searchLength: searchLength,
           extensionSize: extensionSize,
-          retrieved_docs: [], // TODO: Replace with real docs once retrieval is wired
+          //retrieved_docs: [], // TODO: Replace with real docs once retrieval is wired
         }),
       });
 

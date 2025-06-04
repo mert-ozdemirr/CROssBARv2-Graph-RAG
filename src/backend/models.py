@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import List
 
 class QueryRequest(BaseModel):
-    chat_id: str
+    chat_id: int
     content: str
     model: str
     api_key: str
@@ -10,5 +10,5 @@ class QueryRequest(BaseModel):
     extensionSize: int
 
 class QueryResponse(BaseModel):
-    chat_id: str
+    chat_id: int
     response: str

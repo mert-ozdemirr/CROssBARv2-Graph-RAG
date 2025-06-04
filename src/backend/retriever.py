@@ -12,7 +12,6 @@ from fastapi import Request
 
 import llm_analysis
 import voyage_embedder
-from main import all_bm25s
 import neo4j_drive
 
 def get_bm25_collection(request: Request):
@@ -20,7 +19,7 @@ def get_bm25_collection(request: Request):
     all_bm25s_g = request.app.state.all_bm25s
 
 
-def graph_retriever(user_query, candidate_count, graph_match_count):
+def graph_retriever(user_query, candidate_count, graph_match_count, request: Request):
     # make params global
     global candidate_node_count_determiner
     candidate_node_count_determiner = candidate_count
@@ -28,7 +27,7 @@ def graph_retriever(user_query, candidate_count, graph_match_count):
     graph_match_count_determiner = graph_match_count
 
     #
-    get_bm25_collection()
+    get_bm25_collection(request)
 
     # subgraph extraction
     llm_output = llm_analysis.llm_subgraph_pattern_extractor(user_query)
@@ -69,7 +68,7 @@ def graph_retriever(user_query, candidate_count, graph_match_count):
 
 
 
-    return ""
+    return deduplicated_generation_data
 
 
 
@@ -153,7 +152,7 @@ def query_chromadb(query, collection, subchunk_to_parent_map, search_info, top_k
     if (search_info == "question"):
         query_embedding = voyage_embedder.question_or_info_embedder(query)
     else:
-        query_embedding = voyage_embedder(search_info)
+        query_embedding = voyage_embedder.question_or_info_embedder(search_info)
     if query_embedding:
         # 1) Query top_k sub-chunks from your ChromaDB collection
         results = collection.query(
@@ -325,10 +324,10 @@ def candidate_nodes_pid_finder(info, search_category):
             else:
                 chunk_rankings_kw = rank_documents(info, bm25_module["vectors"], bm25_module["data"]) # all scores for hybrid search
             #print(filter_by_similarity_topk(chunk_rankings_kw, 10))
-            retrieved_chunks_kw = filter_by_similarity_topk(chunk_rankings_kw, (candidate_node_count_determiner/4)) # top 5 from kw search
+            retrieved_chunks_kw = filter_by_similarity_topk(chunk_rankings_kw, int(candidate_node_count_determiner/4)) # top 5 from kw search
             print(retrieved_chunks_kw)
     # hybrid search
-    retrieved_chunks_hybrid = filter_by_similarity_topk(hybrid_search(retrieved_chunks_embedding, chunk_rankings_kw), (3*candidate_node_count_determiner/4))
+    retrieved_chunks_hybrid = filter_by_similarity_topk(hybrid_search(retrieved_chunks_embedding, chunk_rankings_kw), int(3*candidate_node_count_determiner/4))
     print(retrieved_chunks_hybrid)
     # pre-retrieval
     pid_list_root = []
